@@ -14,5 +14,5 @@ Run following command inside folder with your `appwrite.json`:
 docker run -it --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ./appwrite.json:/mnt/appwrite.json \
-    meldiron/appwrite-box:0.1.2
+    meldiron/appwrite-box:0.1.3
 ```
