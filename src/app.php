@@ -1,6 +1,6 @@
 <?
 
-require_once '../vendor/autoload.php';
+require_once './vendor/autoload.php';
 
 declare(ticks = 1);
 
@@ -12,30 +12,45 @@ pcntl_signal(SIGINT, function() {
     exit();
 });
 
-$output = '';
+function execute(string $command) {
+    $output = '';
+    $code = Console::execute($command, '', $output);
+
+    if($code !== 0) {
+        var_dump($output);
+        die();
+    }
+}
 
 echo "Cleaning up previous environment ..." . "\n";
 
-Console::execute('docker rm --force $(docker ps -aq --filter "label=com.docker.compose.project.config_files=/root/appwrite/docker-compose.yml")', '', $output);
+execute('docker rm --force $(docker ps -aq --filter "label=com.docker.compose.project.config_files=/root/appwrite/docker-compose.yml")');
 
-Console::execute('cd appwrite && docker compose down -v', '', $output);
+execute('cd appwrite && docker compose down -v');
 
 echo "Pulling Appwrite images ..." . "\n";
 
-Console::execute("cd appwrite && docker compose pull", '', $output);
+execute("cd appwrite && docker compose pull");
 
 echo "Starting new environment ..." . "\n";
 
-Console::execute("cd appwrite && docker compose up -d", '', $output);
+execute("cd appwrite && docker compose up -d");
 
 echo "Waiting for environment to be ready ... " . "\n";
 
-while(true) {
-    $response = Console::execute('curl -s -o /dev/null -w "%{http_code}" http://172.17.0.1:9000/v1/account', '', $output);
+$client = new Client();
 
-    if(\is_string($response) && \trim($response) === "401") {
-        break;
-    }
+while(true) {
+    try {
+        $response = $client->fetch(
+            url: "http://172.17.0.1:9000/v1/account",
+            method: 'GET'
+        );
+    
+        if($response->getStatusCode() === 401) {
+            break;
+        }
+    } catch(Throwable $err) {}
 
     echo "Retrying ..." . "\n";
     \sleep(2);
@@ -43,10 +58,9 @@ while(true) {
 
 echo "Preparing account ... " . "\n";
 
-$client = new Client();
 $client->addHeader('content-type', Client::CONTENT_TYPE_APPLICATION_JSON);
 
-$resp = $client->fetch(
+$response = $client->fetch(
     url: "http://172.17.0.1:9000/v1/account",
     method: 'POST',
     body: [
@@ -57,29 +71,72 @@ $resp = $client->fetch(
     ]
 );
 
-die();
+if($response->getStatusCode() >= 400) {
+    \var_dump($response->getBody());
+    die();
+}
 
-\shell_exec('curl -w "%{http_code}" -X POST -H "Content-Type: application/json" -s \'http://172.17.0.1:9000/v1/account/sessions/email\' --data-raw \'{"email":"admin@appwrite.box","password":"password"}\'');
+$response = $client->fetch(
+    url: "http://172.17.0.1:9000/v1/account/sessions/email",
+    method: 'POST',
+    body: [
+        'email' => 'admin@appwrite.box',
+        'password' => 'password'
+    ]
+);
+
+if($response->getStatusCode() >= 400) {
+    \var_dump($response->getBody());
+    die();
+}
+
+$cookie = $response->getHeaders()['set-cookie'];
+$client->addHeader('cookie', $cookie);
 
 echo "Preparing organization ... " . "\n";
 
-\shell_exec('curl -w "%{http_code}" -X POST -H "Content-Type: application/json" -s \'http://172.17.0.1:9000/v1/teams\' --data-raw \'{"teamId":"appwrite-box","name":"Appwrite Box"}\'');
+$response = $client->fetch(
+    url: "http://172.17.0.1:9000/v1/teams",
+    method: 'POST',
+    body: [
+        'teamId' => 'appwrite-box',
+        'name' => 'Appwrite Box'
+    ]
+);
+
+if($response->getStatusCode() >= 400) {
+    \var_dump($response->getBody());
+    die();
+}
 
 echo "Preparing project ... " . "\n";
 
 $json = \file_get_contents('/mnt/appwrite.json');
 $json = \json_decode($json, true);
-
 $projectId = $json['projectId'];
 $projectName = $json['projectName'] ?? 'Unnamed';
 
-\shell_exec('curl -w "%{http_code}" -X POST -H "Content-Type: application/json" -s \'http://172.17.0.1:9000/v1/projects\' --data-raw \'{"projectId":"' . $projectId . '","name":"' . $projectName . '","teamId":"appwrite-box","region":"default"}\'');
+$response = $client->fetch(
+    url: "http://172.17.0.1:9000/v1/projects",
+    method: 'POST',
+    body: [
+        'teamId' => 'appwrite-box',
+        'region' => 'default',
+        'projectId' => $projectId,
+        'name' => $projectName,
+    ]
+);
+
+if($response->getStatusCode() >= 400) {
+    \var_dump($response->getBody());
+    die();
+}
 
 echo "Pushing configuration ... " . "\n";
 
-\shell_exec('appwrite login --endpoint="http://172.17.0.1:9000/v1" --email="admin@appwrite.box" --password="password"');
+execute('appwrite login --endpoint="http://172.17.0.1:9000/v1" --email="admin@appwrite.box" --password="password"');
 
-\shell_exec('cd /mnt && appwrite push --all --force');
+execute('cd /mnt && appwrite push --all --force');
 
 echo "Done. " . "\n";
 
