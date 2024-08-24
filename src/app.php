@@ -40,6 +40,8 @@ echo "Waiting for environment to be ready ... " . "\n";
 
 $client = new Client();
 
+$endpoint = '';
+
 while(true) {
     try {
         $response = $client->fetch(
@@ -48,6 +50,19 @@ while(true) {
         );
     
         if($response->getStatusCode() === 401) {
+            $endpoint = 'http://172.17.0.1:9000';
+            break;
+        }
+    } catch(Throwable $err) {}
+
+    try {
+        $response = $client->fetch(
+            url: "http://host.docker.internal:9000/v1/account",
+            method: 'GET'
+        );
+    
+        if($response->getStatusCode() === 401) {
+            $endpoint = 'http://host.docker.internal:9000';
             break;
         }
     } catch(Throwable $err) {}
@@ -61,7 +76,7 @@ echo "Preparing account ... " . "\n";
 $client->addHeader('content-type', Client::CONTENT_TYPE_APPLICATION_JSON);
 
 $response = $client->fetch(
-    url: "http://172.17.0.1:9000/v1/account",
+    url: $endpoint . "/v1/account",
     method: 'POST',
     body: [
         'userId' => 'unique()',
@@ -77,7 +92,7 @@ if($response->getStatusCode() >= 400) {
 }
 
 $response = $client->fetch(
-    url: "http://172.17.0.1:9000/v1/account/sessions/email",
+    url: $endpoint . "/v1/account/sessions/email",
     method: 'POST',
     body: [
         'email' => 'admin@appwrite.box',
@@ -96,7 +111,7 @@ $client->addHeader('cookie', $cookie);
 echo "Preparing organization ... " . "\n";
 
 $response = $client->fetch(
-    url: "http://172.17.0.1:9000/v1/teams",
+    url: $endpoint . "/v1/teams",
     method: 'POST',
     body: [
         'teamId' => 'appwrite-box',
@@ -117,7 +132,7 @@ $projectId = $json['projectId'];
 $projectName = $json['projectName'] ?? 'Unnamed';
 
 $response = $client->fetch(
-    url: "http://172.17.0.1:9000/v1/projects",
+    url: $endpoint . "/v1/projects",
     method: 'POST',
     body: [
         'teamId' => 'appwrite-box',
@@ -134,7 +149,8 @@ if($response->getStatusCode() >= 400) {
 
 echo "Pushing configuration ... " . "\n";
 
-execute('appwrite login --endpoint="http://172.17.0.1:9000/v1" --email="admin@appwrite.box" --password="password"');
+
+execute('appwrite login --endpoint="' . $endpoint . '/v1" --email="admin@appwrite.box" --password="password"');
 
 execute('cd /mnt && appwrite push --all --force');
 
