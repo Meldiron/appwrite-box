@@ -1,14 +1,23 @@
-FROM docker:dind
-ARG DEBIAN_FRONTEND=noninteractive
+FROM appwrite/appwrite:1.6.0-RC9
 
-WORKDIR /app
+WORKDIR /usr/src/code
+
+COPY ./supervisord/ /etc/
 
 RUN apk update
-RUN apk add php php-cli screen
 
-COPY appwrite appwrite
-COPY src src
+# Install Appwrite Console
 
-RUN chmod +x src/start.sh
+# Install Appwrite Assistant
 
-CMD ["sh", "-c", "src/start.sh"]
+# Install MariaDB
+RUN apk add mariadb mariadb-client
+
+# Install Redis
+RUN apk add redis 
+
+# Install Traefik
+
+# Install Open Runtimes Executor
+
+CMD ["supervisord", "-c", "/etc/supervisord.conf", "-u", "root"]
