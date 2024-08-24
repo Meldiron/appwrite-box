@@ -1,7 +1,8 @@
-# appwrite-box
+# 📦 Appwrite Box
+
 Self-hosted Appwrite in single container for local development and automated tests (CI/CD)
 
 
 ```
-docker rm --force $(docker ps -aq) && docker run --privileged -p 9000:80 -d -v ./appwrite-box.sh:/mnt/appwrite-box.sh --name appwrite-box docker:dind && docker exec -it appwrite-box /bin/sh -c "chmod +x /mnt/appwrite-box.sh && /mnt/appwrite-box.sh"
+docker build -t appwrite-box . && docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -v ./appwrite.json:/mnt/appwrite.json appwrite-box
 ```

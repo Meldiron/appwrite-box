@@ -1,23 +1,15 @@
-FROM appwrite/appwrite:1.6.0-RC9
+FROM php:8.3.10-cli-alpine3.20
 
-WORKDIR /usr/src/code
+WORKDIR /root
 
-COPY ./supervisord/ /etc/
+RUN apk update && apk add docker-cli docker-cli-compose nodejs npm
 
-RUN apk update
+RUN docker-php-ext-configure pcntl --enable-pcntl && docker-php-ext-install pcntl
 
-# Install Appwrite Console
+RUN npm i -g appwrite-cli@6.0.0-rc.9
 
-# Install Appwrite Assistant
+COPY appwrite appwrite
 
-# Install MariaDB
-RUN apk add mariadb mariadb-client
+COPY src src
 
-# Install Redis
-RUN apk add redis 
-
-# Install Traefik
-
-# Install Open Runtimes Executor
-
-CMD ["supervisord", "-c", "/etc/supervisord.conf", "-u", "root"]
+CMD ["php", "src/app.php"]
