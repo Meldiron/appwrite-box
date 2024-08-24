@@ -24,7 +24,7 @@ function execute(string $command) {
 
 echo "Cleaning up previous environment ..." . "\n";
 
-execute('docker rm --force $(docker ps -aq --filter "label=com.docker.compose.project.config_files=/root/appwrite/docker-compose.yml")');
+execute('docker rm --force $(docker ps -aq --filter "label=com.docker.compose.project.config_files=/root/appwrite/docker-compose.yml") 2> /dev/null || true');
 
 execute('cd appwrite && docker compose down -v');
 
