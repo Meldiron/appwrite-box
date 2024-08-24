@@ -1,0 +1,13 @@
+{
+    "name": "meldiron/appwrite-box",
+    "authors": [
+        {
+            "name": "Matej Bačo",
+            "email": "matejbaco2000@gmail.com"
+        }
+    ],
+    "require": {
+        "utopia-php/cli": "^0.16.0",
+        "utopia-php/fetch": "^0.2.1"
+    }
+}
